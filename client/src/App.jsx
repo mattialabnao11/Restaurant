@@ -62,12 +62,78 @@ function applyThemeToRoot(cfg) {
   if (cfg.nome_locale) document.title = cfg.nome_locale;
 }
 
+// ========== KEEP-ALIVE (anti-sleep Render) ==========
+// Render free dorme dopo ~15 min di inattività. Pinghiamo ogni 12 min
+// quando la tab è visibile, così tieni viva l'app finché qualcuno la sta usando.
+const KEEP_ALIVE_INTERVAL_MS = 12 * 60 * 1000; // 12 minuti
+const KEEP_ALIVE_RETRY_MS = 60 * 1000;          // se errore, riprova fra 1 min
+
+function useKeepAlive() {
+  // Stato di salute esposto al UI (per l'indicatore nella sidebar)
+  const [status, setStatus] = useState({
+    ok: true,
+    lastPing: null,
+    lastError: null
+  });
+
+  useEffect(() => {
+    let timer = null;
+    let stopped = false;
+
+    const ping = async () => {
+      if (stopped) return;
+      try {
+        const r = await fetch(`${API_URL}/api/ping`, { credentials: 'include', cache: 'no-store' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const data = await r.json();
+        setStatus({ ok: true, lastPing: new Date(), lastError: null, uptime: data.uptime });
+        scheduleNext(KEEP_ALIVE_INTERVAL_MS);
+      } catch (e) {
+        // Server probabilmente in sleep o offline: riproviamo presto (così lo svegliamo)
+        setStatus(s => ({ ok: false, lastPing: s.lastPing, lastError: e.message }));
+        scheduleNext(KEEP_ALIVE_RETRY_MS);
+      }
+    };
+
+    const scheduleNext = (ms) => {
+      clearTimeout(timer);
+      // Solo se la tab è visibile programma il prossimo ping. Risparmia banda/risorse.
+      if (document.visibilityState === 'visible') {
+        timer = setTimeout(ping, ms);
+      }
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // Appena la tab torna visibile, pinga subito (potrebbe essere passato molto tempo)
+        ping();
+      } else {
+        clearTimeout(timer);
+      }
+    };
+
+    // Primo ping immediato (così sveglia il dyno e popola lo stato)
+    ping();
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, []);
+
+  return status;
+}
+
 // ========== APP PRINCIPALE ==========
 export default function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [config, setConfig] = useState(DEFAULT_CONFIG);
   const [currentPage, setCurrentPage] = useState('listino');
+  // Sentinella keep-alive: attiva sempre (login + post-login), si pausa se la tab è nascosta
+  const keepAlive = useKeepAlive();
 
   const reloadConfig = useCallback(async () => {
     try {
@@ -131,6 +197,7 @@ export default function App() {
             currentPage={currentPage}
             onNavigate={setCurrentPage}
             onLogout={handleLogout}
+            keepAlive={keepAlive}
           />
           <MainContent currentPage={currentPage} user={user} onNavigate={setCurrentPage} />
         </div>
@@ -256,7 +323,7 @@ function LoginPage({ onLogin }) {
 }
 
 // ========== SIDEBAR ==========
-function Sidebar({ user, currentPage, onNavigate, onLogout }) {
+function Sidebar({ user, currentPage, onNavigate, onLogout, keepAlive }) {
   const { config } = useConfig();
   const L = config.labels || DEFAULT_CONFIG.labels;
 
@@ -323,6 +390,29 @@ function Sidebar({ user, currentPage, onNavigate, onLogout }) {
       <button onClick={onLogout} style={styles.logoutButton}>
         🚪 Esci
       </button>
+
+      {keepAlive && <KeepAliveBadge keepAlive={keepAlive} />}
+    </div>
+  );
+}
+
+// Indicatore di stato della sentinella keep-alive
+function KeepAliveBadge({ keepAlive }) {
+  const ok = keepAlive.ok;
+  const last = keepAlive.lastPing;
+  const lastTxt = last
+    ? last.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    : '—';
+  const tooltip = ok
+    ? `Server attivo · ultimo ping: ${lastTxt}\nLa sentinella mantiene viva l'app ogni 12 minuti.`
+    : `Server non risponde · riprovo automaticamente.\nUltimo errore: ${keepAlive.lastError || 'sconosciuto'}`;
+
+  return (
+    <div style={styles.keepAliveBadge} title={tooltip}>
+      <span style={{ ...styles.keepAliveDot, background: ok ? '#10b981' : '#ef4444' }} />
+      <span style={styles.keepAliveText}>
+        {ok ? 'Sentinella attiva' : 'Riconnessione…'}
+      </span>
     </div>
   );
 }
@@ -2672,6 +2762,30 @@ const styles = {
     // Stessa struttura, solo segnale visivo (non strettamente necessario)
   },
 
+  // ===== Keep-alive badge (sidebar) =====
+  keepAliveBadge: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '8px 16px 14px',
+    fontSize: '11px',
+    color: '#94a3b8',
+    cursor: 'help',
+    userSelect: 'none',
+  },
+  keepAliveDot: {
+    width: '8px',
+    height: '8px',
+    borderRadius: '50%',
+    boxShadow: '0 0 6px currentColor',
+    animation: 'pulse 2s ease-in-out infinite',
+    flexShrink: 0,
+  },
+  keepAliveText: {
+    fontSize: '11px',
+    letterSpacing: '0.3px',
+  },
+
   // ===== Dashboard =====
   dashboardHeader: {
     marginBottom: '28px',
@@ -4107,6 +4221,11 @@ styleSheet.textContent = `
   @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
   }
   
   @keyframes fadeIn {

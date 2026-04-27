@@ -28,6 +28,15 @@ Il Direttore può modificare in qualsiasi momento da `Configurazione`:
 
 Le modifiche sono **immediate per tutti gli utenti** al successivo caricamento.
 
+### 🛰️ Sentinella anti-sleep (Render free)
+Render free mette in pausa l'app dopo ~15 minuti di inattività. L'app integra una **sentinella keep-alive** che:
+- pinga `/api/ping` ogni **12 minuti** quando una pagina è aperta
+- si **mette in pausa automaticamente** quando la tab è in background (risparmia banda/risorse)
+- riprova ogni minuto se il server è offline (lo "sveglia" appena qualcuno torna)
+- mostra in basso nella sidebar un **indicatore di stato** (pallino verde/rosso) con tooltip dell'ultimo ping
+
+In pratica: finché qualcuno tiene aperta l'app in una tab visibile, il server non andrà mai in sleep. Per garanzia 24/7 anche con tab chiuse, configura un servizio esterno (es. [UptimeRobot](https://uptimerobot.com), [cron-job.org](https://cron-job.org)) sull'URL `https://tuo-app.onrender.com/api/ping` ogni 10 minuti.
+
 ## 🛠 Stack Tecnologico
 
 - **Backend**: Node.js + Express

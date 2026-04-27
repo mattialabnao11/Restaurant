@@ -148,6 +148,28 @@ const requireDirettore = (req, res, next) => {
     next();
 };
 
+// ============ KEEP-ALIVE / HEALTH ============
+
+// Endpoint ping leggerissimo per evitare lo sleep di Render (free tier dorme dopo ~15 min).
+// Nessuna autenticazione, nessuna query DB: solo timestamp. Sicuro da chiamare ad alta frequenza.
+app.get('/api/ping', (req, res) => {
+    res.json({
+        ok: true,
+        ts: Date.now(),
+        uptime: Math.round(process.uptime())
+    });
+});
+
+// Healthcheck più completo (con check DB) — utile per monitoring esterni
+app.get('/api/health', async (req, res) => {
+    try {
+        await pool.query('SELECT 1');
+        res.json({ ok: true, db: 'up', uptime: Math.round(process.uptime()) });
+    } catch (e) {
+        res.status(503).json({ ok: false, db: 'down', error: e.message });
+    }
+});
+
 // ============ AUTH ROUTES ============
 
 // Login
