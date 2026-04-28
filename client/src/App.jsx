@@ -65,7 +65,7 @@ function applyThemeToRoot(cfg) {
 // ========== KEEP-ALIVE (anti-sleep Render) ==========
 // Render free dorme dopo ~15 min di inattività. Pinghiamo ogni 12 min
 // quando la tab è visibile, così tieni viva l'app finché qualcuno la sta usando.
-const KEEP_ALIVE_INTERVAL_MS = 12 * 60 * 1000; // 12 minuti
+const KEEP_ALIVE_INTERVAL_MS = 5 * 60 * 1000; // 12 minuti
 const KEEP_ALIVE_RETRY_MS = 60 * 1000;          // se errore, riprova fra 1 min
 
 function useKeepAlive() {
