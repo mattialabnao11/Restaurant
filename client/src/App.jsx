@@ -1025,7 +1025,7 @@ function ListinoPage() {
                   
                   {!costoConosciuto && piatto.ingredienti && piatto.ingredienti.length > 0 && (
                     <div style={styles.costoWarning}>
-                      ⚠️ Collega gli ingredienti ai materiali in Listini Ranch per vedere il costo
+                      ⚠️ Collega gli ingredienti ai materiali in Listini Materiali per vedere il costo
                     </div>
                   )}
                 </div>
@@ -1287,7 +1287,7 @@ function PiattoForm({ piatto, onClose }) {
 
           <div style={styles.formGroup}>
             <div style={styles.labelRow}>
-              <label style={styles.label}>Ingredienti (da Listini Ranch)</label>
+              <label style={styles.label}>Ingredienti (da Listini Materiali)</label>
               <button
                 type="button"
                 onClick={addIngrediente}
@@ -1330,7 +1330,7 @@ function PiattoForm({ piatto, onClose }) {
             ))}
             {ingredienti.length === 0 && (
               <div style={styles.ranchNoPrezzi}>
-                Aggiungi ingredienti dal menu Listini Ranch
+                Aggiungi ingredienti dal menu Listini Materiali
               </div>
             )}
           </div>
@@ -1837,7 +1837,7 @@ function FatturaForm({ piatti, onClose }) {
   );
 }
 
-// ========== LISTINI RANCH PAGE ==========
+// ========== LISTINI Materiali PAGE ==========
 function ListiniRanchPage() {
   const [materiali, setMateriali] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1928,7 +1928,7 @@ function ListiniRanchPage() {
   return (
     <div style={styles.pageContainer}>
       <div style={styles.pageHeader}>
-        <h1 style={styles.pageTitle}>🏪 Listini Ranch - Confronto Prezzi Fornitori</h1>
+        <h1 style={styles.pageTitle}>🏪 Listini Materiali - Confronto Prezzi Fornitori</h1>
         <button
           onClick={() => setShowMaterialeForm(true)}
           style={styles.primaryButton}
@@ -3777,7 +3777,7 @@ const styles = {
     color: '#999',
   },
   
-  // Listini Ranch Styles
+  // Listini Materiali Styles
   ranchContainer: {
     display: 'flex',
     flexDirection: 'column',

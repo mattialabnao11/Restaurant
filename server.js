@@ -587,7 +587,7 @@ app.post('/api/fatture', requireAuth, async (req, res) => {
     }
 });
 
-// ============ LISTINI RANCH ROUTES ============
+// ============ LISTINI Materiali ROUTES ============
 
 // Get tutti i materiali con prezzi venditori
 app.get('/api/materiali', requireAuth, async (req, res) => {
